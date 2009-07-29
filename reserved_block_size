@@ -1,0 +1,30 @@
+#!/bin/bash
+# Shows the reserved block size
+# Released into Public Domain
+
+for device in `ls -1 /dev/[hs]d??`; do
+  echo "Partition: $device"
+  sudo tune2fs -l $device > /dev/null
+  if [ $? = "0" ]; then
+    reservedblocksize=`sudo tune2fs -l $device | grep "Reserved block count" | tr -s " " | cut -d " " -f 4`
+    totalblocksize=`sudo tune2fs -l $device | grep "Block count" | tr -s " " | cut -d " " -f 3`
+    blocksize=`sudo tune2fs -l $device | grep "Block size" | tr -s " " | cut -d " " -f 3`
+
+    totalpartsize=`echo "scale=2; $totalblocksize * $blocksize" | bc`
+    totalpartsizegib=`echo "scale=2; $totalblocksize * $blocksize / 1024 ^ 3" | bc | sed -e 's/^\./0./'`
+
+    echo "Reserved blocks: $reservedblocksize"
+    echo "Total blocks: $totalblocksize"
+    echo "Total partition size (bytes): $totalpartsize"
+    echo "Total partition size (GiB): $totalpartsizegib"
+
+    convertpercent=`echo "scale=2; $reservedblocksize / $totalblocksize * 100" | bc`
+    convertsize=`echo "scale=2; $reservedblocksize * $blocksize"|bc`
+    convertsizegib=`echo "scale=2; $reservedblocksize * $blocksize / 1024 ^ 3" | bc | sed -e 's/^\./0./'`
+
+    echo "Reserved percentage: $convertpercent %"
+    echo "Reserved size (bytes): $convertsize"
+    echo "Reserved size (GiB): $convertsizegib"
+  fi
+  echo
+done

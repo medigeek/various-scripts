@@ -1,0 +1,11 @@
+#!/bin/bash
+# Run it in greek language
+# Released into Public Domain
+
+ext=avi
+outdir=test
+mkdir -p "$outdir"
+for i in *.$ext; do
+  ofile=$(basename "$i" .$ext);
+  ffmpeg -y -i "$i" -pass 1 -vcodec libx264 -vpre fastfirstpass -b 512k -bt 512k -threads 0 -f matroska -an /dev/null && ffmpeg -i "$i" -pass 2 -acodec libfaac -ab 64k -ac 2 -vcodec libx264 -vpre hq -b 512k -bt 512k -threads 0 -f matroska "$outdir/$ofile.mkv"
+done

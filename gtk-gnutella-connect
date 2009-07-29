@@ -1,0 +1,87 @@
+#! /bin/bash
+# This script is released into the Public Domain.
+# Purpose: Pushes nodes to gtk-gnutella
+# Requires: gtkdialog
+# Manual: http://xpt.sourceforge.net/techdocs/language/gtkdialog/gtkde03-GtkdialogUserManual/single/
+
+if [ ! "`ps -C gtk-gnutella -o pid=`" ]; then
+    echo "OOPS! gtk-gnutella is not open. Run the program first!"
+    sleep 4
+    exit
+fi
+
+get_random_server () {
+    # Get random gnutella web cache server
+    client="?client=gtk-gnutella.sf.net&hostfile=1"
+    servers=("http://drei.gtkg.net:8080/gwc/$client" \
+        "http://ein.gtkg.net:8080/gwc/$client" \
+        "http://gnutelladev1.udp-host-cache.com:8080/gwc/$client" \
+        "http://gnutelladev2.udp-host-cache.com:8080/gwc/$client" \
+        "http://gwc.ak-electron.eu:12050/$client" \
+        "http://leet.gtkg.org:8080/gwc/$client" \
+        "http://secondary.udp-host-cache.com:8080/gwc/$client" \
+        "http://sissy.gtkg.org:8080/gwc/$client" \
+        "http://tertiary.udp-host-cache.com:8080/gwc/$client" \
+        "http://zwei.gtkg.net:8080/gwc/$client")
+    RANGE=10
+    number=$RANDOM
+    let "number %= $RANGE"
+    export RANDOM_SERVER="${servers[$number]}"
+}
+
+get_ip_list () {
+    # Read the gnutella web cache server peer list
+    iplist=`wget -q --timeout=3 -O - -U "LimeWire/5.2.8" "${RANDOM_SERVER}"`
+    export IP_LIST="$iplist"
+}
+
+get_random_server
+
+echo "Contacting server: $RANDOM_SERVER"
+echo "Please wait..."
+
+get_ip_list
+
+# Our dialog
+export MAIN_DIALOG='
+<vbox>
+    <text>
+        <label>Please type in the list of server IP:PORT</label>
+    </text>
+    <edit>
+        <variable>GNUTELLA_PEERS</variable>
+        <default>
+        '
+            
+export MAIN_DIALOG+="\"${IP_LIST}\""
+
+export MAIN_DIALOG+='
+        </default>
+    </edit>
+    <button cancel></button>
+    <button ok></button>
+</vbox>
+'
+
+IFS=""
+for STATEMENTS in  $(gtkdialog --center --program=MAIN_DIALOG); do
+  eval $STATEMENTS
+done
+unset IFS
+
+if [ $EXIT = "OK" ]; then
+    echo "$GNUTELLA_PEERS"
+    IFS=$'\n'
+    for i in $GNUTELLA_PEERS; do
+        if [ $i ]; then
+            echo $i
+            echo node add $i | gtk-gnutella --shell
+        fi
+        #sleep 1
+    done
+    echo "Done!"
+else
+    echo "Aborted."
+fi
+
+sleep 4

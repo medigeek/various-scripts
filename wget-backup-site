@@ -1,0 +1,6 @@
+#!/bin/bash
+# Backup the site without following any parent websites
+# Released into Public Domain
+
+wget -nd -np -N -r --level=1 -k -p $0-
+

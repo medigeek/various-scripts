@@ -1,0 +1,18 @@
+#!/bin/bash
+# Run it in greek language
+# Released into Public Domain
+
+outputdir="./converted/"
+outputsize="640x480"
+thumbnailsize="10x75"
+
+[ -d $outputdir ] || mkdir $outputdir
+list=`ls -1 | grep -i "\.raf$"`
+for i in $list; do
+	fname=`basename $i | sed -e 's/\.raf$//i'`
+	outputfile="$outputdir$fname.png"
+	thumbfile="$outputdir$fname.thumb.png"
+	ufraw-batch --overwrite --silent --out-type=png16 --size=$outputsize --output=$outputfile "$i"
+	ufraw-batch --overwrite --silent --out-type=png16 --size=$thumbnailsize --output=$thumbfile "$i"
+	echo "Done $i"
+done

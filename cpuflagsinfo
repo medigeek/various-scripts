@@ -1,0 +1,12 @@
+#!/bin/bash
+# Shows what some linux features mean
+# I think it needs the linux source package
+# Released into Public Domain
+
+flags=(`grep -m 1 flags /proc/cpuinfo | sed -e 's/flags[\t\s]*:\s*//'`)
+for i in "${flags[@]}"; do
+	kernel=`uname -r`
+	a=`grep -i "#define X86_FEATURE_$i\s" /usr/src/linux-headers-$kernel/include/asm/cpufeature_32.h | tr -s '[:space:]' | sed -e 's#^[^/]*/\*##' -e 's# \*/$##'`
+	b=`grep -i "#define cpu_has_$i\s" /usr/src/linux-headers-$kernel/include/asm/cpufeature_64.h | tr -s '[:space:]' | sed -e "s/^#define cpu_has_$i //"`
+	echo "CPU Flag $i:$a - $b"
+done

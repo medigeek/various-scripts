@@ -1,0 +1,123 @@
+#!/bin/bash
+# Clean up script for the Ubuntu Operating System
+# Requires: bash zenity gksu (and a desktop manager obviously)
+
+#  Copyright (c) 2008 Savvas Radevic
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Clear variables
+aptupdate=0
+cspoweroff=0
+aptnonpurged=""
+aptkernels=""
+grubkernels=""
+kernelstopurge=""
+
+# Main
+IFS='|'
+cleanuplist=`zenity --width 600 --height 400 --list --checklist --text "Choose what type of cleanup you wish:" --hide-column=2 --column "Do" --column "ID" --column "Description" \
+TRUE 10 "APT: clears all unnecessary package dependencies (apt-get autoremove --purge)" \
+TRUE 20 "APT: clears all unnecessary packages (apt-get autoclean)" \
+FALSE 30 "APT: clears all cached/downloaded packages (apt-get clean)" \
+TRUE 40 "APT: clears all configuration files of non-purged packages (aptitude purge non-purged packages)" \
+FALSE 41 "APT: clears all apt list-related files (rm -f /var/lib/apt/lists/* /var/lib/apt/lists/partial/*)" \
+FALSE 50 "Kernel: purge all obsolete/local GNU/Linux kernels (except the last two)" \
+FALSE 100 "Temporary files: Clear Gedit/text editor temporary files in $HOME (removes *~ files)" \
+TRUE 150 "Thumbnails: Clear thumbnails files older than 7 days in $HOME (removes files from ~/.thumbnails)" \
+FALSE 500 "Shutdown when done"`
+
+for i in $cleanuplist; do
+  if [ "$i" = "10" ]; then
+    echo -e "\nAPT: Clearing unnecessary package dependencies.."
+    gksu --description 'Clean-up script' ''
+    sudo apt-get autoremove --purge -y
+    aptupdate=1
+  fi
+  if [ "$i" = "20" ]; then
+    echo -e "\nAPT: Removing unnecessary cached/downloaded packages.."
+    gksu --description 'Clean-up script' ''
+    sudo apt-get autoclean
+    aptupdate=1
+  fi
+  if [ "$i" = "30" ]; then
+    echo -e "\nAPT: Clearing all cached/downloaded packages.."
+    gksu --description 'Clean-up script' ''
+    sudo apt-get clean
+    aptupdate=1
+  fi
+  if [ "$i" = "40" ]; then
+    unset IFS
+    echo -e "\nAPT: Clearing all non-purged packages.."
+    aptitude search '~c' -F '%p' | xargs -n 30 sudo aptitude -y purge
+    aptupdate=1
+  fi
+  if [ "$i" = "41" ]; then
+    unset IFS
+    echo -e "\nAPT: Clearing all apt list-related files in /var/lib/apt/lists/ and /var/lib/apt/lists/partial/.."
+    gksu --description 'Clean-up script' ''
+    sudo rm -f /var/lib/apt/lists/* /var/lib/apt/lists/partial/*
+    aptupdate=1
+  fi
+  if [ "$i" = "50" ]; then
+    unset IFS
+    echo -e "\nKernel: purge all obsolete/local GNU/Linux kernels (except the last two).."
+    echo "Getting the last two kernels from grub.."
+    grubkernels=`cat /boot/grub/menu.lst | grep '^title.*kernel' | grep -o 'kernel [0-9][^ ]*' | cut -d ' ' -f 2 | sort -u -r | head -n 2`
+    echo "Getting the versions of the obsolete kernel packages.."
+    aptkernels="`aptitude search '~o^linux-image' -F '%p' | cut -d- -f3-`"
+    echo "Comparing kernel packages.."
+    for k in $aptkernels; do
+      kernelmatch=`echo "$grubkernels" | grep $k`
+      if [ ! "$kernelmatch" ]; then
+        if [ ! "$kernelstopurge" ]; then
+          kernelstopurge+="$k"
+        else
+          kernelstopurge+=" $k"
+        fi
+      else
+        echo "Ignoring $k (it's in the latest two kernels)"
+      fi
+    done
+    if [ "$kernelstopurge" ]; then
+      list="`for i in $kernelstopurge; do echo linux-image-$i; done`"
+      echo "Will purge the following obsolete kernels: $list"
+      gksu --description 'Clean-up script' ''
+      sudo aptitude -y purge $list
+    else
+      echo "No actions taken"
+    fi
+  fi
+  if [ "$i" = "100" ]; then
+    echo -e "\nTemporary files: Clearing *~ temporary files in $HOME.."
+    find $HOME -depth -name "*~" -delete
+  fi
+  if [ "$i" = "150" ]; then
+    echo -e "\nThumbnails: Clear thumbnails files older than 7 days in $HOME.."
+    find $HOME/.thumbnails -type f -atime +7 -delete
+  fi
+  if [ "$i" = "500" ]; then
+    echo -e "\nShutdown requested.."
+    cspoweroff=1
+  fi
+done
+unset IFS
+
+if [ "$aptupdate" = "1" ]; then
+  echo -e "\nAPT: Updating/refreshing the APT package database.."
+  gksu --description 'Clean-up script' ''
+  sudo apt-get update
+fi
+
+if [ "$cspoweroff" = "1" ]; then
+  gksu --description "Clean-up script (shutdown)" "shutdown -P now"
+fi
+

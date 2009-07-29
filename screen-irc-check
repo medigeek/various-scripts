@@ -1,0 +1,32 @@
+#!/bin/bash
+# Check if a user is available
+# Released into Public Domain
+
+scrpresent=""
+if [[ $1 != "" ]]; then
+	check=$1
+else
+	check="irc"
+fi
+if [[ -d "/var/run/screen/S-$USER" ]]; then
+	cd /var/run/screen/S-$USER/
+	for i in *.$check; do
+		scrpresent+=$(basename "$i ")
+	done
+	if [[ $scrpresent != "" && $scrpresent != "*.$check " ]]; then
+		echo "$check screen present: $scrpresent"
+		sleep 1s
+		screen -r
+	else
+		echo "No $check screen present. Running..."
+		cd $HOME
+		sleep 1s
+		screen -S irc irssi
+	fi
+else
+	echo "No $check screen present. Running..."
+	cd $HOME
+	sleep 1s
+	screen -S irc irssi
+fi
+

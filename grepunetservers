@@ -1,0 +1,5 @@
+#!/bin/bash
+# Get Undernet servers list
+# Released into Public Domain
+
+wget -q -O - http://www.undernet.org/servers.php | egrep -io '>[^>]*[a-zA-Z][a-zA-Z]\.undernet\.org<' | tr -t [:upper:] [:lower:] | sed -e 's,>\|<,,g'

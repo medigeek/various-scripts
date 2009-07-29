@@ -1,0 +1,6 @@
+#!/bin/bash
+# Returns the line you want
+# Usage: bash viewline myfile 4
+# Released into Public Domain
+
+head -n $2 "$1" | tail -n 1

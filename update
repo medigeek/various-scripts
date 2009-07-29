@@ -1,0 +1,14 @@
+#!/bin/bash
+# Quick way to update and shutdown (argument "yes")
+# Released into Public Domain
+
+echo Argument: $1
+
+aptitude update
+sleep 2
+aptitude -y safe-upgrade
+sleep 2
+if [ "$1" == "yes" ]; then
+  shutdown -P now
+fi
+

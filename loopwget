@@ -1,0 +1,11 @@
+#!/bin/bash 
+count=1
+while [ 1 ]; do
+	wget -q --delete-after $1
+	wasted1=$(($count*733/1024))
+	wasted2=$(($count*733%1024))
+	echo "Wasted: $wasted1,$wasted2 MB"
+	let count=$count+1
+	sleep 3
+done
+
