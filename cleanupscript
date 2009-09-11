@@ -30,7 +30,8 @@ TRUE 20 "APT: clears all unnecessary packages (apt-get autoclean)" \
 FALSE 30 "APT: clears all cached/downloaded packages (apt-get clean)" \
 TRUE 40 "APT: clears all configuration files of non-purged packages (aptitude purge non-purged packages)" \
 FALSE 41 "APT: clears all apt list-related files (rm -f /var/lib/apt/lists/* /var/lib/apt/lists/partial/*)" \
-FALSE 50 "Kernel: purge all obsolete/local GNU/Linux kernels (except the last two)" \
+FALSE 50 "Kernel: purge all obsolete/local GNU/Linux kernels (except the two most current ones)" \
+FALSE 60 "Kernel: purge installed GNU/Linux kernels (except the two most current ones)" \
 FALSE 100 "Temporary files: Clear Gedit/text editor temporary files in $HOME (removes *~ files)" \
 TRUE 150 "Thumbnails: Clear thumbnails files older than 7 days in $HOME (removes files from ~/.thumbnails)" \
 FALSE 500 "Shutdown when done"`
@@ -42,24 +43,32 @@ for i in $cleanuplist; do
     sudo apt-get autoremove --purge -y
     aptupdate=1
   fi
+  
+  
   if [ "$i" = "20" ]; then
     echo -e "\nAPT: Removing unnecessary cached/downloaded packages.."
     gksu --description 'Clean-up script' ''
     sudo apt-get autoclean
     aptupdate=1
   fi
+  
+  
   if [ "$i" = "30" ]; then
     echo -e "\nAPT: Clearing all cached/downloaded packages.."
     gksu --description 'Clean-up script' ''
     sudo apt-get clean
     aptupdate=1
   fi
+  
+  
   if [ "$i" = "40" ]; then
     unset IFS
     echo -e "\nAPT: Clearing all non-purged packages.."
     aptitude search '~c' -F '%p' | xargs -n 30 sudo aptitude -y purge
     aptupdate=1
   fi
+  
+  
   if [ "$i" = "41" ]; then
     unset IFS
     echo -e "\nAPT: Clearing all apt list-related files in /var/lib/apt/lists/ and /var/lib/apt/lists/partial/.."
@@ -67,13 +76,19 @@ for i in $cleanuplist; do
     sudo rm -f /var/lib/apt/lists/* /var/lib/apt/lists/partial/*
     aptupdate=1
   fi
+  
+  
   if [ "$i" = "50" ]; then
     unset IFS
+    grubkernels=""
+    kernelstopurge=""
+    kernelmatch=""
     echo -e "\nKernel: purge all obsolete/local GNU/Linux kernels (except the last two).."
     echo "Getting the last two kernels from grub.."
     grubkernels=`cat /boot/grub/menu.lst | grep '^title.*kernel' | grep -o 'kernel [0-9][^ ]*' | cut -d ' ' -f 2 | sort -u -r | head -n 2`
     echo "Getting the versions of the obsolete kernel packages.."
     aptkernels="`aptitude search '~o^linux-image' -F '%p' | cut -d- -f3-`"
+    
     echo "Comparing kernel packages.."
     for k in $aptkernels; do
       kernelmatch=`echo "$grubkernels" | grep $k`
@@ -96,14 +111,56 @@ for i in $cleanuplist; do
       echo "No actions taken"
     fi
   fi
+  
+  
+  if [ "$i" = "60" ]; then
+    unset IFS
+    grubkernels=""
+    kernelstopurge=""
+    kernelmatch=""
+    echo -e "\nKernel: purge installed GNU/Linux kernels (except the last two).."
+    echo "Getting the last two kernels from grub.."
+    grubkernels=`cat /boot/grub/menu.lst | grep '^title.*kernel' | grep -o 'kernel [0-9][^ ]*' | cut -d ' ' -f 2 | sort -u -r | head -n 2`
+    echo "Getting the versions of the installed kernel packages.."
+    aptkernels="`aptitude search '~i^linux-image' -F '%p' | grep '[0-9]' | cut -d- -f3-`"
+    # grep helps avoid listing linux-image-generic
+    
+    echo "Comparing kernel packages to exclude the 2 most current ones.."
+    for k in $aptkernels; do
+      kernelmatch=`echo "$grubkernels" | grep $k`
+      if [ ! "$kernelmatch" ]; then
+        if [ ! "$kernelstopurge" ]; then
+          kernelstopurge+="$k"
+        else
+          kernelstopurge+=" $k"
+        fi
+      else
+        echo "Ignoring $k (one of the most current two kernels)"
+      fi
+    done
+    if [ "$kernelstopurge" ]; then
+      list="`for i in $kernelstopurge; do echo linux-image-$i; done`"
+      echo "Will purge the following kernels: $list"
+      gksu --description 'Clean-up script' ''
+      sudo aptitude -y purge $list
+    else
+      echo "No actions taken"
+    fi
+  fi
+  
+  
   if [ "$i" = "100" ]; then
     echo -e "\nTemporary files: Clearing *~ temporary files in $HOME.."
     find $HOME -depth -name "*~" -delete
   fi
+  
+  
   if [ "$i" = "150" ]; then
     echo -e "\nThumbnails: Clear thumbnails files older than 7 days in $HOME.."
     find $HOME/.thumbnails -type f -atime +7 -delete
   fi
+  
+  
   if [ "$i" = "500" ]; then
     echo -e "\nShutdown requested.."
     cspoweroff=1
