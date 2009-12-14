@@ -120,7 +120,11 @@ for i in $cleanuplist; do
     kernelmatch=""
     echo -e "\nKernel: purge installed GNU/Linux kernels (except the last two).."
     echo "Getting the last two kernels from grub.."
-    grubkernels=`cat /boot/grub/menu.lst | grep '^title.*kernel' | grep -o 'kernel [0-9][^ ]*' | cut -d ' ' -f 2 | sort -u -r | head -n 2`
+    if [ -f /boot/grub/menu.lst ]; then
+        grubkernels=`cat /boot/grub/menu.lst | grep '^title.*kernel' | grep -o 'kernel [0-9][^ ]*' | cut -d ' ' -f 2 | sort -u -r | head -n 2`
+    elif [ -f /boot/grub/grub.cfg ]; then
+        grubkernels=`cat /boot/grub/grub.cfg | grep '^menuentry.*Linux' | grep -o 'Linux [0-9][^ "]*' | cut -d ' ' -f 2 | sort -u -r | head -n 2`
+    fi
     echo "Getting the versions of the installed kernel packages.."
     aptkernels="`aptitude search '~i^linux-image' -F '%p' | grep '[0-9]' | cut -d- -f3-`"
     # grep helps avoid listing linux-image-generic
