@@ -7,6 +7,8 @@
 # Š
 # Ž
 #È Č
+#ð dj
+#Æ Ć
 
 convertdir="$@"
 echo "Will change directory and subdirectories: $convertdir"
@@ -15,8 +17,8 @@ read
 convertdir="."
 
 ToUTF () {
- iconv -f ISO-8859-15 -t UTF-8 $i -o "$1.tmp"
- sed -i -e 's/è/č/g' -e 's/æ/ć/g' -e 's//ž/g' -e 's//š/g' -e 's//Š/g' -e 's//Ž/g' -e 's/È/Č/g' "$1.tmp"
+ iconv -f ISO-8859-15 -t UTF-8 "$1" -o "$1.tmp"
+ sed -i -e 's/ð/dj/g' -e 's/è/č/g' -e 's/æ/ć/g' -e 's//ž/g' -e 's//š/g' -e 's//Š/g' -e 's//Ž/g' -e 's/È/Č/g' -e 's/Æ/Ć/g' "$1.tmp"
  mv "$1" "$1.original"
  mv "$1.tmp" "$1"
 }
