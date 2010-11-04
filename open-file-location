@@ -1,0 +1,74 @@
+#!/bin/sh
+# This script opens the selected file location (the actual folder).
+# Pretty much like Windows XP right-click -> Properties -> Open file location
+
+# It opens a new window of nautilus. It also follows links and opens the 
+# actual path they link to.
+# Warning: Works only when ONE file/folder is selected. If more files are 
+# selected, it uses the first one selected.
+
+# Updates:
+# - Works with Search now
+
+# Copyright © 2010, Savvas Radevic <vicedar@gmail.com>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Variables:
+base="`echo $NAUTILUS_SCRIPT_CURRENT_URI | cut -d'/' -f3- | sed 's/%20/ /g'`"
+firstfile=""
+dir=""
+
+# Function to find file location
+_FIND_LOCATION () {
+    if [ -h "$firstfile" ]; then
+        # if selection is link
+        if [ -f "$firstfile" ]; then
+            # if selection is link & file
+            dir="`dirname $(readlink \"$firstfile\")`"
+        elif [ -d "$firstfile" ]; then
+            # if selection is link & directory
+            dir="`readlink \"$firstfile\"`"
+        fi
+    elif [ -f "$firstfile" ]; then
+        # if selection is file
+        dir="`dirname \"$firstfile\"`"
+    elif [ -d "$firstfile" ]; then
+        # if selection is directory
+        dir="$firstfile"
+    fi
+}
+
+# Preparation:
+if [ -z "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" ]; then
+    # If string is empty
+    if [ `echo $NAUTILUS_SCRIPT_CURRENT_URI|grep "^x-nautilus-search"` ]; then
+        # if we're in search mode, use $1 to figure out the first file, because
+        # $NAUTILUS_SCRIPT_SELECTED_FILE_PATHS is empty
+        firstfile="$1"
+        _FIND_LOCATION "$firstfile"
+    else
+        dir="$base"
+    fi
+else
+    # Get first file from $NAUTILUS_SCRIPT_SELECTED_FILE_PATHS
+    firstfile="`echo $NAUTILUS_SCRIPT_SELECTED_FILE_PATHS | head -n 1`"
+    _FIND_LOCATION "$firstfile"
+fi
+
+# Testing:
+#xterm -e "echo \"current uri: $NAUTILUS_SCRIPT_CURRENT_URI -- $NAUTILUS_SCRIPT_SELECTED_FILE_PATHS\"; echo \"\$1: $1\"; echo \"would open $dir\"; sh"
+
+# Action:
+nautilus "$dir"

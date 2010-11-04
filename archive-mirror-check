@@ -1,0 +1,41 @@
+#!/bin/bash
+# Used to check if archive mirrors are OK
+# Needs: Debian-based distribution & chdist (devscripts)
+# Copyright (C) 2010 Savvas Radevic
+# License: GPL-3 - http://www.gnu.org/licenses/gpl-3.0.txt
+# TODO: Use something like: chdist -d "$HOME/.chdist/cy.archive.ubuntu.com/" ?
+
+mirror="http://cy.archive.ubuntu.com"
+debrepo="$mirror/ubuntu"
+releases=(hardy intrepid jaunty karmic lucid)
+
+for rel in ${releases[@]}; do
+    echo -e "\n\nTesting Mirror: $mirror Release: $rel\n\n"
+
+    # Variables
+    rootdir="$HOME/.chdist/$rel"
+
+    # Remove $rootdir
+    rm -rf "$rootdir"
+
+    # Prepare $rootdir, silence chdist
+    chdist create $rel > /dev/null
+
+    # Prepare sources.list
+    echo "deb $debrepo $rel main restricted universe multiverse
+deb $debrepo ${rel}-updates main restricted universe multiverse
+deb $debrepo ${rel}-proposed main restricted universe multiverse
+deb $debrepo ${rel}-backports main restricted universe multiverse
+
+deb-src $debrepo $rel main restricted universe multiverse
+deb-src $debrepo ${rel}-updates main restricted universe multiverse
+deb-src $debrepo ${rel}-proposed main restricted universe multiverse
+deb-src $debrepo ${rel}-backports main restricted universe multiverse" > "$rootdir/etc/apt/sources.list"
+
+    # Get rid of bug https://bugs.launchpad.net/bugs/566682
+    mkdir -p "$rootdir/etc/apt/apt.conf.d/"
+
+    # Run update
+    chdist apt-get $rel update
+done
+

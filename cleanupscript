@@ -1,6 +1,6 @@
 #!/bin/bash
 # Clean up script for the Ubuntu Operating System
-# Requires: bash zenity gksu (and a desktop manager obviously)
+# Requires: bash zenity gksu sudo grub-mkconfig aptitude (and a desktop manager obviously)
 
 #  Copyright (c) 2008 Savvas Radevic
 #  This program is free software: you can redistribute it and/or modify
@@ -84,32 +84,41 @@ for i in $cleanuplist; do
     kernelstopurge=""
     kernelmatch=""
     echo -e "\nKernel: purge all obsolete/local GNU/Linux kernels (except the last two).."
+    gksu --description 'Kernel: purge all obsolete/local GNU/Linux kernels (except the two most current ones)' ''
     echo "Getting the last two kernels from grub.."
     if [ -f /boot/grub/menu.lst ]; then
+        echo "Grub version 1 detected"
         grubkernels=`cat /boot/grub/menu.lst | grep '^title.*kernel' | grep -o 'kernel [0-9][^ ]*' | cut -d ' ' -f 2 | sort -u -r | head -n 2`
     elif [ -f /boot/grub/grub.cfg ]; then
-        grubkernels=`cat /boot/grub/grub.cfg | grep '^menuentry.*Linux' | grep -o 'Linux [0-9][^ "]*' | cut -d ' ' -f 2 | sort -u -r | head -n 2`
+        echo "Grub version 2 detected"
+        grubkernels=`sudo grub-mkconfig --output=/dev/null 2>&1 | grep -i linux |  cut -d " " -f 4 | cut -d "-" -f 2- | sort -u -r | head -n 2`
     fi
+    echo "Last two kernels: $grubkernels"
     echo "Getting the versions of the obsolete kernel packages.."
     aptkernels="`aptitude search '~o^linux-image' -F '%p' | cut -d- -f3-`"
     
     echo "Comparing kernel packages.."
-    for k in $aptkernels; do
-      kernelmatch=`echo "$grubkernels" | grep $k`
-      if [ ! "$kernelmatch" ]; then
-        if [ ! "$kernelstopurge" ]; then
-          kernelstopurge+="$k"
+    if [ "$aptkernels" ]; then
+      for k in $aptkernels; do
+        kernelmatch=`echo "$grubkernels" | grep $k`
+        if [ ! "$kernelmatch" ]; then
+          if [ ! "$kernelstopurge" ]; then
+            kernelstopurge+="$k"
+          else
+            kernelstopurge+=" $k"
+          fi
         else
-          kernelstopurge+=" $k"
+          echo "Ignoring $k (it's in the latest two kernels)"
         fi
-      else
-        echo "Ignoring $k (it's in the latest two kernels)"
-      fi
-    done
+      done
+    else
+      echo "No obsolete linux image packages detected"
+    fi
     if [ "$kernelstopurge" ]; then
       list="`for i in $kernelstopurge; do echo linux-image-$i; done`"
       echo "Will purge the following obsolete kernels: $list"
       gksu --description 'Clean-up script' ''
+      #sudo aptitude -sy purge $list
       sudo aptitude -y purge $list
     else
       echo "No actions taken"
@@ -122,13 +131,17 @@ for i in $cleanuplist; do
     grubkernels=""
     kernelstopurge=""
     kernelmatch=""
+    gksu --description 'Kernel: purge installed GNU/Linux kernels (except the two most current ones)' ''
     echo -e "\nKernel: purge installed GNU/Linux kernels (except the last two).."
     echo "Getting the last two kernels from grub.."
     if [ -f /boot/grub/menu.lst ]; then
-        grubkernels=`cat /boot/grub/menu.lst | grep '^title.*kernel' | grep -o 'kernel [0-9][^ ]*' | cut -d ' ' -f 2 | sort -u -r | head -n 2`
+      echo "Grub version 1 detected"
+      grubkernels=`cat /boot/grub/menu.lst | grep '^title.*kernel' | grep -o 'kernel [0-9][^ ]*' | cut -d ' ' -f 2 | sort -u -r | head -n 2`
     elif [ -f /boot/grub/grub.cfg ]; then
-        grubkernels=`cat /boot/grub/grub.cfg | grep '^menuentry.*Linux' | grep -Po "Linux [0-9][^ '\x42]*" | cut -d ' ' -f 2 | sort -u -r | head -n 2`
+      echo "Grub version 2 detected"
+      grubkernels=`sudo grub-mkconfig --output=/dev/null 2>&1 | grep -i linux |  cut -d " " -f 4 | cut -d "-" -f 2- | sort -u -r | head -n 2`
     fi
+    echo "Last two kernels: $grubkernels"
     echo "Getting the versions of the installed kernel packages.."
     aptkernels="`aptitude search '~i^linux-image' -F '%p' | grep '[0-9]' | cut -d- -f3-`"
     # grep helps avoid listing linux-image-generic
@@ -150,6 +163,7 @@ for i in $cleanuplist; do
       list="`for i in $kernelstopurge; do echo linux-image-$i; done`"
       echo "Will purge the following kernels: $list"
       gksu --description 'Clean-up script' ''
+      #sudo aptitude -sy purge $list
       sudo aptitude -y purge $list
     else
       echo "No actions taken"
