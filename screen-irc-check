@@ -1,5 +1,5 @@
 #!/bin/bash
-# Check if a user is available
+# Check if a screen instance is available
 # Released into Public Domain
 
 scrpresent=""
