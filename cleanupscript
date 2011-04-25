@@ -119,7 +119,7 @@ for i in $cleanuplist; do
       echo "Will purge the following obsolete kernels: $list"
       gksu --description 'Clean-up script' ''
       #sudo aptitude -sy purge $list
-      sudo aptitude -y purge $list
+      sudo aptitude purge $list
     else
       echo "No actions taken"
     fi
@@ -164,7 +164,7 @@ for i in $cleanuplist; do
       echo "Will purge the following kernels: $list"
       gksu --description 'Clean-up script' ''
       #sudo aptitude -sy purge $list
-      sudo aptitude -y purge $list
+      sudo aptitude purge $list
     else
       echo "No actions taken"
     fi
