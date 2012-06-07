@@ -2,4 +2,4 @@
 # Run it in greek language
 # Released into Public Domain
 
-LANGUAGE="el_GR:el" LANG="el_GR.UTF-8" $*
+LANGUAGE="el_GR:el" LANG="el_GR.UTF-8" LC_ALL="el_GR.UTF-8" $*
